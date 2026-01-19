@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Med-Foundry Smith-Heffa | Buttertech Inc.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; color: #e5e5e5; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; height: 300px; max-height: 400px; }
+        .glow-text { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        .agent-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1); }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #171717; }
+        ::-webkit-scrollbar-thumb { background: #404040; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #525252; }
+        
+        .modal-backdrop { background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); }
+        .loading-dots:after { content: ' .'; animation: dots 1.5s steps(5, end) infinite;}
+        @keyframes dots { 0%, 20% { content: ' .'; } 40% { content: ' ..'; } 60% { content: ' ...'; } 80%, 100% { content: ''; } }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-20 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center py-8 z-20">
+        <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white text-xl shadow-[0_0_15px_rgba(37,99,235,0.3)] mb-10">B</div>
+        
+        <nav class="flex flex-col gap-8 w-full items-center">
+            <button onclick="switchView('dashboard')" class="p-3 rounded-lg hover:bg-neutral-800 text-blue-400 transition-colors group relative" title="Dashboard">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span class="absolute left-14 bg-neutral-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-neutral-700">Vue Globale</span>
+            </button>
+            <button onclick="switchView('agents')" class="p-3 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors group relative" title="Agents">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12 2.1 10.5"></path><path d="M12 12l9.9-1.5"></path></svg>
+                <span class="absolute left-14 bg-neutral-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-neutral-700">Orchestration IA</span>
+            </button>
+            <button onclick="openAiChat()" class="p-3 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors group relative" title="IA Consultant">
+                <span class="text-lg">✨</span>
+                <span class="absolute left-14 bg-neutral-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-neutral-700">Consultant Gemini</span>
+            </button>
+        </nav>
+
+        <div class="mt-auto flex flex-col gap-4">
+            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]"></div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden">
+        
+        <!-- Top Bar -->
+        <header class="h-16 border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-8">
+            <div class="flex items-center gap-4">
+                <h1 class="text-lg font-bold tracking-tight text-white">MED-FOUNDRY <span class="text-blue-500">SMITH-HEFFA</span></h1>
+                <span class="px-2 py-0.5 rounded border border-neutral-700 text-[10px] text-neutral-400 font-mono uppercase">Intelligent Hub</span>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <button onclick="generateAiReport()" class="bg-blue-600/10 border border-blue-500/30 hover:bg-blue-600/20 text-blue-400 text-xs py-1.5 px-3 rounded-lg transition-all flex items-center gap-2">
+                    <span>✨ Synthèse Executive</span>
+                </button>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-green-900/20 border border-green-500/20 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                    <span class="text-xs font-medium text-green-400 uppercase tracking-tighter">Google Partner Connected</span>
+                </div>
+                <div class="h-8 w-px bg-neutral-800"></div>
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-neutral-500 uppercase font-mono">Status IA</span>
+                    <span class="text-sm font-bold text-blue-400 font-mono uppercase" id="ia-status">Opérationnel</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- DASHBOARD VIEW -->
+        <div id="view-dashboard" class="p-8 space-y-8 animate-fade-in">
+            
+            <!-- Intro Text -->
+            <div class="max-w-4xl">
+                <h2 class="text-3xl font-bold text-white mb-2">Vision Augmentée & Raisonnement Multimodal</h2>
+                <p class="text-neutral-400 leading-relaxed">
+                    Plateforme d'intelligence territoriale propulsée par <span class="text-blue-400">Gemini 2.5 Flash</span>. Smith-Heffa orchestre les flux cliniques et urbains pour protéger le patrimoine public. 
+                    <span class="block mt-2 italic text-sm border-l-2 border-blue-500 pl-4 py-1 bg-blue-500/5">"L'IA n'est pas seulement une vision, c'est une aide à la décision souveraine."</span>
+                </p>
+            </div>
+
+            <!-- KPI Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-neutral-900 border border-neutral-800 p-5 rounded-xl">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2 bg-blue-500/10 rounded-lg"><svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+                        <span class="text-xs text-green-500 font-mono">+98%</span>
+                    </div>
+                    <div class="text-2xl font-bold text-white mb-1">Réactivité</div>
+                    <div class="text-xs text-neutral-500">Délai sécuritaire</div>
+                </div>
+                <div class="bg-neutral-900 border border-neutral-800 p-5 rounded-xl">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2 bg-green-500/10 rounded-lg"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                        <span class="text-xs text-green-500 font-mono">-35%</span>
+                    </div>
+                    <div class="text-2xl font-bold text-white mb-1">Économie</div>
+                    <div class="text-xs text-neutral-500">Optimisation maintenance</div>
+                </div>
+                <div class="bg-neutral-900 border border-neutral-800 p-5 rounded-xl">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2 bg-purple-500/10 rounded-lg"><svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></div>
+                        <span class="text-xs text-blue-400 font-mono">ACTIVE</span>
+                    </div>
+                    <div class="text-2xl font-bold text-white mb-1">MedGemma</div>
+                    <div class="text-xs text-neutral-500">Analyse Multimodale</div>
+                </div>
+                <div class="bg-neutral-900 border border-neutral-800 p-5 rounded-xl">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2 bg-red-500/10 rounded-lg"><svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></div>
+                        <span class="text-xs text-white font-mono">SHIELD</span>
+                    </div>
+                    <div class="text-2xl font-bold text-white mb-1">Intégrité</div>
+                    <div class="text-xs text-neutral-500">Audit Fraude Continu</div>
+                </div>
+            </div>
+
+            <!-- Orchestration Flow & AI Insights -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div class="xl:col-span-2 bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+                            Orchestration Agentique Smith-Heffa
+                        </h3>
+                        <div class="flex gap-2">
+                            <button class="text-xs bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded transition-colors border border-neutral-700" onclick="triggerSimulation()">Flux de Test</button>
+                            <button id="btn-analyze-incident" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-all shadow-lg shadow-blue-500/20" onclick="analyzeIncident()">✨ Analyse Smith-Heffa</button>
+                        </div>
+                    </div>
+                    
+                    <div class="relative h-64 w-full bg-neutral-950/50 rounded-xl border border-neutral-800 overflow-hidden flex items-center justify-center" id="orchestration-canvas">
+                        <!-- Central Node -->
+                        <div class="absolute z-10 bg-blue-900/80 border border-blue-500 p-4 rounded-full w-32 h-32 flex flex-col items-center justify-center text-center shadow-[0_0_30px_rgba(59,130,246,0.3)] transition-all duration-500" id="node-smith">
+                            <span class="text-xs font-bold text-blue-200 uppercase">Agent</span>
+                            <span class="text-sm font-black text-white">SMITH-HEFFA</span>
+                            <span class="text-[10px] text-blue-300 mt-1">Core Gemini</span>
+                        </div>
+
+                        <!-- Satellite Nodes -->
+                        <div class="absolute left-[10%] top-1/2 -translate-y-1/2 p-3 bg-neutral-800 border border-neutral-700 rounded-lg w-40 text-center transition-all duration-300 opacity-50" id="node-vision">
+                            <div class="text-xs text-neutral-400 mb-1">INGESTION (Vision)</div>
+                            <div class="text-sm font-bold text-white">DeepStream</div>
+                        </div>
+
+                        <div class="absolute right-[10%] top-[20%] p-3 bg-neutral-800 border border-neutral-700 rounded-lg w-40 text-center transition-all duration-300 opacity-50" id="node-med">
+                            <div class="text-xs text-neutral-400 mb-1">RAISONNEMENT</div>
+                            <div class="text-sm font-bold text-white">MedGemma</div>
+                        </div>
+
+                        <div class="absolute right-[10%] bottom-[20%] p-3 bg-neutral-800 border border-neutral-700 rounded-lg w-40 text-center transition-all duration-300 opacity-50" id="node-bio">
+                            <div class="text-xs text-neutral-400 mb-1">RECHERCHE</div>
+                            <div class="text-sm font-bold text-white">BioNeMo</div>
+                        </div>
+
+                        <svg class="absolute inset-0 w-full h-full pointer-events-none">
+                            <line id="line-1" x1="20%" y1="50%" x2="45%" y2="50%" stroke="#404040" stroke-width="2" stroke-dasharray="5,5" />
+                            <line id="line-2" x1="55%" y1="50%" x2="80%" y2="30%" stroke="#404040" stroke-width="2" stroke-dasharray="5,5" />
+                            <line id="line-3" x1="55%" y1="50%" x2="80%" y2="70%" stroke="#404040" stroke-width="2" stroke-dasharray="5,5" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- AI Insight Panel -->
+                <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 flex flex-col">
+                    <h3 class="text-sm font-bold text-white mb-4 uppercase tracking-widest flex items-center gap-2">
+                        <span class="text-lg">✨</span> IA Insight Feed
+                    </h3>
+                    <div id="ai-insight-content" class="flex-1 bg-black/40 border border-white/5 rounded-xl p-4 overflow-y-auto text-sm text-neutral-400 leading-relaxed font-mono">
+                        <p class="text-neutral-600 italic">En attente d'analyse d'incident pour générer des recommandations stratégiques...</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/5">
+                        <p class="text-[10px] text-neutral-600 uppercase font-mono tracking-widest">Powered by Gemini 2.5 Flash</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Log -->
+            <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
+                <h3 class="text-sm font-bold text-white mb-4 uppercase">Terminal d'Opérations</h3>
+                <div class="bg-black font-mono text-xs p-3 rounded-lg h-32 overflow-y-auto border border-neutral-800 text-green-400" id="system-logs">
+                    <p>[SYSTEM] Initialisation Smith-Heffa Core...</p>
+                    <p>[SYSTEM] NVIDIA Triton Connected: Inference 24ms</p>
+                    <p class="text-neutral-500 italic">Prêt pour réception de signaux...</p>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-neutral-900 border border-neutral-800 p-6 rounded-xl h-80 flex flex-col">
+                    <h3 class="text-sm font-bold text-white mb-4 uppercase">Performance de Réactivité</h3>
+                    <div class="chart-container flex-1">
+                        <canvas id="reactivityChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-neutral-900 border border-neutral-800 p-6 rounded-xl h-80 flex flex-col">
+                    <h3 class="text-sm font-bold text-white mb-4 uppercase">Courbe d'Optimisation Budgétaire</h3>
+                    <div class="chart-container flex-1">
+                        <canvas id="costChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- End Dashboard View -->
+
+    </main>
+
+    <!-- AI REPORT MODAL -->
+    <div id="modal-report" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+        <div class="bg-neutral-900 border border-blue-500/30 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                    <span class="text-2xl">✨</span> Synthèse Stratégique Buttertech
+                </h2>
+                <button onclick="closeModal('modal-report')" class="text-neutral-500 hover:text-white">&times;</button>
+            </div>
+            <div id="report-body" class="p-8 overflow-y-auto text-neutral-300 leading-relaxed font-mono text-sm whitespace-pre-wrap">
+                <!-- Content injected here -->
+            </div>
+            <div class="p-4 border-t border-white/10 bg-black/20 flex justify-end gap-3">
+                <button onclick="closeModal('modal-report')" class="px-6 py-2 rounded-lg bg-neutral-800 text-white hover:bg-neutral-700 transition-all">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI CHAT MODAL -->
+    <div id="modal-chat" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+        <div class="bg-neutral-900 border border-purple-500/30 w-full max-w-xl rounded-2xl shadow-2xl flex flex-col h-[600px]">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-white flex items-center gap-3">
+                    <span class="text-2xl">✨</span> Consultant MedGemma
+                </h2>
+                <button onclick="closeModal('modal-chat')" class="text-neutral-500 hover:text-white">&times;</button>
+            </div>
+            <div id="chat-history" class="flex-1 p-6 overflow-y-auto space-y-4">
+                <div class="bg-neutral-800/50 p-3 rounded-lg border border-white/5 max-w-[80%]">
+                    <p class="text-sm">Bonjour. Je suis l'interface de raisonnement MedGemma. Comment puis-je vous aider dans votre analyse clinique ou territoriale aujourd'hui ?</p>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <input type="text" id="chat-input" placeholder="Posez une question à l'IA..." class="flex-1 bg-black border border-neutral-700 rounded-lg px-4 py-2 text-sm focus:border-purple-500 focus:outline-none transition-all">
+                <button onclick="sendChatMessage()" id="btn-chat-send" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-white transition-all font-bold">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIG GEMINI
+        const apiKey = ""; 
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+        
+        async function callGemini(prompt, systemInstruction = "") {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
+
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error('API Error');
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu générer de réponse.";
+                } catch (e) {
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            return "Erreur de connexion persistante avec l'IA.";
+        }
+
+        // STATE & LOGS
+        const logEl = document.getElementById('system-logs');
+        let sessionLogs = [];
+
+        function addLog(msg, type = 'info') {
+            const p = document.createElement('p');
+            const time = new Date().toLocaleTimeString('fr-FR', { hour12: false });
+            p.innerHTML = `<span class="text-neutral-500">[${time}]</span> ${msg}`;
+            if (type === 'alert') p.className = "text-red-400 font-bold";
+            if (type === 'success') p.className = "text-blue-400";
+            if (type === 'agent') p.className = "text-purple-400";
+            logEl.appendChild(p);
+            logEl.scrollTop = logEl.scrollHeight;
+            sessionLogs.push(`[${time}] ${msg}`);
+            if (sessionLogs.length > 20) sessionLogs.shift();
+        }
+
+        // AI FEATURES
+        async function analyzeIncident() {
+            const insightContent = document.getElementById('ai-insight-content');
+            const btn = document.getElementById('btn-analyze-incident');
+            
+            if (sessionLogs.length < 5) {
+                addLog("Analyse annulée: Trop peu de données dans le terminal.", "alert");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = "<span class='loading-dots italic uppercase'>Analyse IA</span>";
+            insightContent.innerHTML = "<div class='flex items-center justify-center h-full'><p class='loading-dots text-blue-500 uppercase tracking-widest text-xs'>Smith-Heffa réfléchit</p></div>";
+
+            const prompt = `Voici les derniers logs de notre infrastructure Med-Foundry: \n${sessionLogs.join('\n')}\n\nEn tant qu'Agent Smith-Heffa, analyse ces événements. Identifie les menaces potentielles, la performance de l'orchestration et suggère une action corrective immédiate. Réponds en français, avec un ton professionnel et autoritaire.`;
+            const system = "Tu es l'Agent Smith-Heffa, le cerveau central d'une infrastructure IA souveraine pour villes intelligentes. Tu es précis, analytique et orienté vers la protection du patrimoine public.";
+
+            const result = await callGemini(prompt, system);
+            
+            insightContent.innerHTML = `<div class='animate-fade-in'>${result.replace(/\n/g, '<br>')}</div>`;
+            btn.disabled = false;
+            btn.innerText = "✨ Analyse Smith-Heffa";
+            addLog("IA Insight généré avec succès.", "success");
+        }
+
+        async function generateAiReport() {
+            const modal = document.getElementById('modal-report');
+            const body = document.getElementById('report-body');
+            
+            modal.classList.remove('hidden');
+            body.innerHTML = "<div class='flex flex-col items-center justify-center py-20'><p class='loading-dots text-blue-400 uppercase font-bold'>Génération de la synthèse exécutive</p></div>";
+
+            const prompt = `Génère une synthèse stratégique pour Buttertech Inc. Basé sur les métriques suivantes: 
+            - Réactivité sécuritaire: 98%
+            - Économie de maintenance: 35%
+            - Latence: 24ms
+            - Orchestration: Smith-Heffa (Gemini), MedGemma, NVIDIA BioNeMo.
+            Le ton doit être celui d'un architecte IA présentant à un maire ou un gestionnaire d'infrastructure. Explique pourquoi ce modèle "Gated Ingress/Egress" est la clé de la souveraineté. Utilise des puces et des titres clairs.`;
+            
+            const system = "Tu es Franz Heffa, fondateur de Buttertech. Tu es humble mais puissant techniquement. Ton focus est l'amortissement de la dégradation du patrimoine public.";
+
+            const result = await callGemini(prompt, system);
+            body.innerHTML = result;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const history = document.getElementById('chat-history');
+            const btn = document.getElementById('btn-chat-send');
+            const text = input.value.trim();
+            
+            if (!text) return;
+
+            // Add user message
+            const userMsg = document.createElement('div');
+            userMsg.className = "bg-purple-900/20 p-3 rounded-lg border border-purple-500/20 ml-auto max-w-[80%] text-right";
+            userMsg.innerHTML = `<p class='text-sm'>${text}</p>`;
+            history.appendChild(userMsg);
+            input.value = "";
+            history.scrollTop = history.scrollHeight;
+
+            // Loading state
+            btn.disabled = true;
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = "bg-neutral-800/50 p-3 rounded-lg border border-white/5 max-w-[80%] flex items-center gap-2";
+            loadingMsg.innerHTML = `<p class='text-sm italic loading-dots'>MedGemma analyse</p>`;
+            history.appendChild(loadingMsg);
+
+            const prompt = `L'utilisateur pose une question sur l'écosystème Med-Foundry ou une question médicale/technique: "${text}". Réponds en tant qu'agent MedGemma spécialisé dans l'IA souveraine et le patrimoine public.`;
+            const system = "Tu es l'agent MedGemma, une extension de raisonnement clinique et territorial. Tu es expert en modèles ouverts Google (HAI-DEF) et en infrastructure NVIDIA.";
+
+            const result = await callGemini(prompt, system);
+            
+            history.removeChild(loadingMsg);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = "bg-neutral-800/50 p-3 rounded-lg border border-white/5 max-w-[80%]";
+            aiMsg.innerHTML = `<p class='text-sm'>${result}</p>`;
+            history.appendChild(aiMsg);
+            history.scrollTop = history.scrollHeight;
+            btn.disabled = false;
+        }
+
+        // SIMULATION UI (From Original)
+        function triggerSimulation() {
+            addLog("Signal entrant Caméra #04 (Hikvision)", 'alert');
+            document.getElementById('node-vision').style.opacity = '1';
+            document.getElementById('node-vision').style.borderColor = '#22c55e';
+            document.getElementById('line-1').setAttribute('stroke', '#22c55e');
+            document.getElementById('line-1').setAttribute('stroke-dasharray', '0');
+
+            setTimeout(() => {
+                addLog("Smith-Heffa: Analyse multimodale Gemini 2.5 Flash...", 'success');
+                document.getElementById('node-smith').classList.add('scale-110', 'bg-blue-800');
+                
+                setTimeout(() => {
+                    addLog("Routage vers MedGemma pour audit clinique.", 'agent');
+                    document.getElementById('node-med').style.opacity = '1';
+                    document.getElementById('node-med').style.borderColor = '#a855f7';
+                    document.getElementById('line-2').setAttribute('stroke', '#a855f7');
+                    document.getElementById('line-2').setAttribute('stroke-dasharray', '0');
+
+                    setTimeout(() => {
+                        addLog("MedGemma: Anomalie validée. Alerte envoyée.", 'agent');
+                        addLog("Opérationnel: 24ms Inférence.", 'success');
+                        setTimeout(resetSimulation, 3000);
+                    }, 1000);
+                }, 1000);
+            }, 800);
+        }
+
+        function resetSimulation() {
+            ['node-vision', 'node-med', 'node-bio'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.style.opacity = '0.5'; el.style.borderColor = '#404040'; }
+            });
+            document.getElementById('node-smith').classList.remove('scale-110', 'bg-blue-800');
+            ['line-1', 'line-2', 'line-3'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.setAttribute('stroke', '#404040'); el.setAttribute('stroke-dasharray', '5,5'); }
+            });
+        }
+
+        // NAVIGATION & MODALS
+        function switchView(v) { console.log("Vue: " + v); }
+        function openAiChat() { document.getElementById('modal-chat').classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        
+        document.getElementById('chat-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+
+        // CHARTS
+        document.addEventListener('DOMContentLoaded', () => {
+            const ctx1 = document.getElementById('reactivityChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Avant Buttertech', 'Avec Smith-Heffa'],
+                    datasets: [{
+                        label: 'Secondes',
+                        data: [1200, 0.024],
+                        backgroundColor: ['#404040', '#3b82f6'],
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#262626' } }, x: { grid: { display: false } } } }
+            });
+
+            const ctx2 = document.getElementById('costChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr'],
+                    datasets: [{
+                        data: [100, 88, 72, 65],
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#262626' } }, x: { grid: { display: false } } } }
+            });
+        });
+    </script>
+</body>
+</html>
